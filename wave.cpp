@@ -239,6 +239,31 @@ int main(int argc, char** argv) {
         indices.push_back(dist(gen));
     }
 
+    int sigma = 0;
+    vector<bool> exists(255);
+    vector<uint8_t> alphabet;
+
+    for (uint8_t c : s) {
+        if(!exists[c]) {
+            exists[c] = true;
+            sigma++;
+            alphabet.push_back(c);
+        }
+    }
+    vector<uint8_t> alphabet_sorted;
+    for (int i = 0; i < 255; i++) {
+        if (exists[i]) {
+            alphabet_sorted.push_back(i);
+        }
+    }
+
+    vector<uint8_t> random_chars;
+    uniform_int_distribution<int>dist_alph(0, sigma - 1);
+    for (int64_t i = 0; i < m; i++){
+        random_chars.push_back(dist_alph(gen));
+    }
+    
+
     // assert correct
     for (int i = 0; i < indices.size() && i < 5; i++) {
         int j = indices[i];
@@ -246,9 +271,9 @@ int main(int argc, char** argv) {
             << ", wt_huff[" << j << "] = " << wt[j] << endl;
     }
 
-    uint8_t rank_char = 'x';
     for (int i = 0; i < indices.size() && i < 5; i++) {
         int j = indices[i];
+        uint8_t rank_char = random_chars[i];
         cout << "wavelet_tree.rank(" << j << ", '" << rank_char << "') = " << rank_wave(*wavelet_tree, rank_char, j)
             << ", wt_huff.rank(" << j << ", '" << rank_char << "') = " << wt.rank(j, rank_char) << endl;
     }
@@ -269,4 +294,25 @@ int main(int argc, char** argv) {
     }
     end = timestamp();
     cout << "Wavelettree Access with " << m << " iterations finished in " << end - start << " ms" << endl;
+
+    // test speed rank
+    start = timestamp();
+    x = 0;
+    for (int i = 0; i < m; i++) {
+        int j = indices[i];
+        uint8_t rank_char = random_chars[i];
+        x += wt.rank(j, rank_char);
+    }
+    end = timestamp();
+    cout << "SDSL WT Huff Rank with " << m << " iterations finished in " << end - start << " ms" << endl;
+
+    start = timestamp();
+    x = 0;
+    for (int i = 0; i < m; i++) {
+        int j = indices[i];
+        uint8_t rank_char = random_chars[i];
+        x += rank_wave(*wavelet_tree, rank_char, j);
+    }
+    end = timestamp();
+    cout << "Wavelettree Rank with " << m << " iterations finished in " << end - start << " ms" << endl;
 }
