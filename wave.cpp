@@ -34,6 +34,26 @@ struct wave_bv {
     }
 };
 
+int rank_wave(wave_bv& wavelet_tree, uint8_t c, int i) {
+    bool bit_value = (*(wavelet_tree.bv))[i];
+    if(bit_value == 0) {
+        // go to left child
+        int new_index = i - (*wavelet_tree.rank_bv)(i);
+        if(wavelet_tree.left_child == nullptr) {
+            return new_index;
+        }
+        return rank_wave(*wavelet_tree.left_child,  c, new_index);
+    } else {
+        // go to right child
+        int new_index = (*wavelet_tree.rank_bv)(i);
+        if(wavelet_tree.right_child == nullptr) {
+            return new_index;
+        }
+        return rank_wave(*wavelet_tree.right_child, c, new_index);
+    }
+    return -1;
+}
+
 uint8_t access_wave(wave_bv& wavelet_tree, int i) {
     /*cout << "alphabet = [";
     for (uint8_t c : (*wavelet_tree.alphabet)) {
@@ -168,7 +188,7 @@ int main(int argc, char** argv) {
     construct_im(wt, s, 1);
 
     // create test indices
-    const int m = 100000;
+    const int m = 1000000;
     vector<int> indices;
 
     random_device rd; 
@@ -180,8 +200,15 @@ int main(int argc, char** argv) {
 
     // assert correct
     for (int i = 0; i < indices.size() && i < 100; i++) {
-        cout << "wavelet_tree[" << i << "] = " << access_wave(*wavelet_tree, i)
-            << ", wt_huff[" << i << "] = " << wt[i] << endl;
+        int j = indices[i];
+        cout << "wavelet_tree[" << j << "] = " << access_wave(*wavelet_tree, j)
+            << ", wt_huff[" << j << "] = " << wt[j] << endl;
+    }
+
+    for (int i = 0; i < indices.size() && i < 10; i++) {
+        int j = indices[i];
+        cout << "wavelet_tree.rank(" << j << ", '" << access_wave(*wavelet_tree, j) << "') = " << rank_wave(*wavelet_tree, wt[j], j)
+            << ", wt_huff.rank(" << j << ", '" << wt[j] << "') = " << wt.rank(j, wt[j]) << endl;
     }
 
     // test speed
