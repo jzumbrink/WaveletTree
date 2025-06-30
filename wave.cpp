@@ -4,6 +4,7 @@
 #include <memory>
 #include <random>
 #include <chrono>
+#include <bitset>
 
 // sdsl
 #include <sdsl/wavelet_trees.hpp>
@@ -24,6 +25,7 @@ struct wave_bv {
     unique_ptr<wave_bv> right_child;
     unique_ptr<rank_support_v<>> rank_bv;
     unique_ptr<vector<uint8_t>> alphabet;
+    unique_ptr<bitset<256>> first_half;
 
     wave_bv(unique_ptr<bit_vector> bv_in,  unique_ptr<vector<uint8_t>> alphabet_in) {
         bv = move(bv_in);
@@ -31,12 +33,19 @@ struct wave_bv {
         right_child =  nullptr;
         rank_bv = make_unique<rank_support_v<>>(bv.get());
         alphabet = move(alphabet_in);
+        first_half = make_unique<bitset<256>>();
+
+        int sigma = (*alphabet).size();
+        int split_index = sigma / 2;
+        for (int i = 0; i < split_index; i++) {
+            (*first_half).set((*alphabet)[i]);
+        }
     }
 };
 
 int rank_wave(wave_bv& wavelet_tree, uint8_t c, int i) {
-    bool bit_value = (*(wavelet_tree.bv))[i];
-    if(bit_value == 0) {
+    bool is_in_first_half = (*wavelet_tree.first_half).test(c);
+    if(is_in_first_half) {
         // go to left child
         int new_index = i - (*wavelet_tree.rank_bv)(i);
         if(wavelet_tree.left_child == nullptr) {
@@ -108,7 +117,7 @@ unique_ptr<wave_bv> wave1(string &s) {
             alphabet_sorted.push_back(i);
         }
     }
-    cout << "sigma = " << sigma << ", workingIndex = " << workingIndex << endl;
+    //cout << "sigma = " << sigma << ", workingIndex = " << workingIndex << endl;
 
     // split alphabet into two bv
     unique_ptr<bit_vector> level_one = make_unique<bit_vector>(n, 0);
@@ -126,12 +135,12 @@ unique_ptr<wave_bv> wave1(string &s) {
     }
 
     rank_support_v<> rank_level_one(level_one.get());
-    cout << "level_one = " << (*level_one)[0] << (*level_one)[1] << (*level_one)[2] << (*level_one)[3] << (*level_one)[4] << (*level_one)[5] << "..." << endl;
-    cout << "rank_level_one(6) = " << rank_level_one(0) << " (expected 3)" << endl;
-    cout << "size of level_one in MB: " << size_in_mega_bytes(*level_one) << endl;
-    cout << "size of rank_level_one in MB: " << size_in_mega_bytes(rank_level_one) << endl;
-    cout << "length left_string = " << left_string.length() << endl;
-    cout << "length right_string = " << right_string.length() << endl << endl;
+    //cout << "level_one = " << (*level_one)[0] << (*level_one)[1] << (*level_one)[2] << (*level_one)[3] << (*level_one)[4] << (*level_one)[5] << "..." << endl;
+    //cout << "rank_level_one(6) = " << rank_level_one(0) << " (expected 3)" << endl;
+    //cout << "size of level_one in MB: " << size_in_mega_bytes(*level_one) << endl;
+    //cout << "size of rank_level_one in MB: " << size_in_mega_bytes(rank_level_one) << endl;
+    //cout << "length left_string = " << left_string.length() << endl;
+    //cout << "length right_string = " << right_string.length() << endl << endl;
 
     auto root = make_unique<wave_bv>(move(level_one), make_unique<vector<uint8_t>>(alphabet_sorted));
 
@@ -161,8 +170,6 @@ void sdsl_huff(string &s) {
 }
 
 int main(int argc, char** argv) {
-    cout << "Hi, was geht" << endl;
-
     string s;
 
     {
@@ -172,7 +179,11 @@ int main(int argc, char** argv) {
     int64_t n = s.length();
     cout << "File " << filename << " successfully loaded (n=" << n << ")" << endl << flush;
 
+    // construction wavelet tree
+    auto start_construction = timestamp();
     unique_ptr<wave_bv> wavelet_tree = wave1(s);
+    auto end_construction = timestamp();
+    cout << "Wavelettree for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
 
     uint8_t result = access_wave(*wavelet_tree, 0);
     cout << "Access[0] = " << result << " (int) " << (int) result << " (expected '<')" << endl;
@@ -183,9 +194,16 @@ int main(int argc, char** argv) {
     result = access_wave(*wavelet_tree, 3);
     cout << "Access[3] = " << result << " (expected 'm')" << endl;
 
+    int r = rank_wave(*wavelet_tree, '<', 60);
+    cout << "wavelet_tree.rank(60, '<') = " << r << " (expected 2)" << endl;
+
     wt_huff<> wt;
 
+    // construct sdsl huff wv tree
+    start_construction = timestamp();
     construct_im(wt, s, 1);
+    end_construction = timestamp();
+    cout << "sdsl wv tree huff for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
 
     // create test indices
     const int m = 1000000;
@@ -199,19 +217,20 @@ int main(int argc, char** argv) {
     }
 
     // assert correct
-    for (int i = 0; i < indices.size() && i < 100; i++) {
+    for (int i = 0; i < indices.size() && i < 5; i++) {
         int j = indices[i];
         cout << "wavelet_tree[" << j << "] = " << access_wave(*wavelet_tree, j)
             << ", wt_huff[" << j << "] = " << wt[j] << endl;
     }
 
-    for (int i = 0; i < indices.size() && i < 10; i++) {
+    uint8_t rank_char = 'x';
+    for (int i = 0; i < indices.size() && i < 5; i++) {
         int j = indices[i];
-        cout << "wavelet_tree.rank(" << j << ", '" << access_wave(*wavelet_tree, j) << "') = " << rank_wave(*wavelet_tree, wt[j], j)
-            << ", wt_huff.rank(" << j << ", '" << wt[j] << "') = " << wt.rank(j, wt[j]) << endl;
+        cout << "wavelet_tree.rank(" << j << ", '" << rank_char << "') = " << rank_wave(*wavelet_tree, rank_char, j)
+            << ", wt_huff.rank(" << j << ", '" << rank_char << "') = " << wt.rank(j, rank_char) << endl;
     }
 
-    // test speed
+    // test speed access
     auto start = timestamp();
     int64_t x = 0;
     for (int i : indices) {
