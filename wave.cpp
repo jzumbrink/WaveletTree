@@ -2,6 +2,8 @@
 #include <fstream>
 #include <cstdint>
 #include <memory>
+#include <random>
+#include <chrono>
 
 // sdsl
 #include <sdsl/wavelet_trees.hpp>
@@ -12,7 +14,9 @@ using namespace sdsl;
 
 string filename = "resources/dblp.xml";
 
-
+uintmax_t timestamp() {
+    return std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
+}
 
 struct wave_bv {
     unique_ptr<bit_vector> bv;
@@ -31,45 +35,25 @@ struct wave_bv {
 };
 
 uint8_t access_wave(wave_bv& wavelet_tree, int i) {
-    cout << "alphabet = [";
+    /*cout << "alphabet = [";
     for (uint8_t c : (*wavelet_tree.alphabet)) {
         cout << c << " ";
     }
-    cout << "]" << endl;
-
-    cerr << i << endl;
-    if(wavelet_tree.bv == nullptr) {
-            cerr << "INVALID NULL POINTER" << endl << flush;
-            return 0;
-        }
+    cout << "]" << endl;*/
     bool bit_value = (*(wavelet_tree.bv))[i];
-    cout << "bit_value[" << i << "] = " << bit_value << endl;
     if(bit_value == 0) {
         // go to left child
         if(wavelet_tree.left_child == nullptr) {
             return (*wavelet_tree.alphabet)[0];
         }
-        if(wavelet_tree.rank_bv == nullptr) {
-            cerr << "INVALID NULL POINTER" << endl << flush;
-            return 0;
-        } else {
-            //rank_support_v<> rank_temp(wavelet_tree.bv.get());
-            int new_index = i - (*wavelet_tree.rank_bv)(i);
-            cout << "new_index = " << new_index << endl;
-            if(wavelet_tree.left_child == nullptr) {
-                cerr << "INVALID NULL POINTER" << endl << flush;
-                return 0;
-            }
-            return access_wave(*wavelet_tree.left_child, new_index);
-        }
+        int new_index = i - (*wavelet_tree.rank_bv)(i);
+        return access_wave(*wavelet_tree.left_child, new_index);
     } else {
         // go to right child
         if(wavelet_tree.right_child == nullptr) {
-            cout << "hello world" << endl;
             return (*wavelet_tree.alphabet)[(*wavelet_tree.alphabet).size() - 1];
         }
         int new_index = (*wavelet_tree.rank_bv)(i);
-        cout << "new_index_right = " << new_index << endl;
         return access_wave(*wavelet_tree.right_child, new_index);
     }
 
@@ -179,5 +163,41 @@ int main(int argc, char** argv) {
     result = access_wave(*wavelet_tree, 3);
     cout << "Access[3] = " << result << " (expected 'm')" << endl;
 
-    sdsl_huff(s);
+    wt_huff<> wt;
+
+    construct_im(wt, s, 1);
+
+    // create test indices
+    const int m = 100000;
+    vector<int> indices;
+
+    random_device rd; 
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dist(0, n - 1);
+    for (int64_t i = 0; i < m; i++) {
+        indices.push_back(dist(gen));
+    }
+
+    // assert correct
+    for (int i = 0; i < indices.size() && i < 100; i++) {
+        cout << "wavelet_tree[" << i << "] = " << access_wave(*wavelet_tree, i)
+            << ", wt_huff[" << i << "] = " << wt[i] << endl;
+    }
+
+    // test speed
+    auto start = timestamp();
+    int64_t x = 0;
+    for (int i : indices) {
+        x += (int)wt[i];
+    }
+    auto end = timestamp();
+    cout << "SDSL WT Huff Access with " << m << " iterations finished in " << end - start << " ms" << endl;
+
+    start = timestamp();
+    x = 0;
+    for (int i : indices) {
+        x += access_wave(*wavelet_tree, i);
+    }
+    end = timestamp();
+    cout << "Wavelettree Access with " << m << " iterations finished in " << end - start << " ms" << endl;
 }
