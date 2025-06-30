@@ -159,6 +159,25 @@ unique_ptr<wave_bv> wave1(string &s) {
     return move(root);
 }
 
+int size_wave(wave_bv& wavelet_tree) {
+    int level_size = 0;
+    level_size += size_in_bytes(*wavelet_tree.bv);
+    level_size += size_in_bytes(*wavelet_tree.rank_bv);
+    level_size += (*wavelet_tree.alphabet).capacity() * sizeof(uint8_t);
+    level_size += sizeof(bitset<256>);
+
+    //cout << "level_size = " << level_size << endl; 
+
+    if(wavelet_tree.left_child != nullptr) {
+        level_size += size_wave(*wavelet_tree.left_child);
+    }
+    if(wavelet_tree.right_child != nullptr) {
+        level_size += size_wave(*wavelet_tree.right_child);
+    }
+
+    return level_size;
+}
+
 void sdsl_huff(string &s) {
     wt_huff<> wt;
 
@@ -184,6 +203,9 @@ int main(int argc, char** argv) {
     unique_ptr<wave_bv> wavelet_tree = wave1(s);
     auto end_construction = timestamp();
     cout << "Wavelettree for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
+    int size_wave_bytes = size_wave(*wavelet_tree);
+    cout << "Größe wave = " << size_wave_bytes << " bytes" << endl;
+    cout << "Größe wave = " << size_wave_bytes / (1024 * 1024) << " MB" << endl;
 
     uint8_t result = access_wave(*wavelet_tree, 0);
     cout << "Access[0] = " << result << " (int) " << (int) result << " (expected '<')" << endl;
@@ -204,6 +226,7 @@ int main(int argc, char** argv) {
     construct_im(wt, s, 1);
     end_construction = timestamp();
     cout << "sdsl wv tree huff for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
+    cout << "Größe wt_huff = " << size_in_mega_bytes(wt) << " MB" << endl;
 
     // create test indices
     const int m = 1000000;
