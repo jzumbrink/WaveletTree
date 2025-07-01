@@ -204,10 +204,9 @@ int main(int argc, char** argv) {
     auto end_construction = timestamp();
     cout << "Wavelettree for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
     int size_wave_bytes = size_wave(*wavelet_tree);
-    cout << "Größe wave = " << size_wave_bytes << " bytes" << endl;
-    cout << "Größe wave = " << size_wave_bytes / (1024 * 1024) << " MB" << endl;
+    cout << "Größe Wavelettree = " << size_wave_bytes << " bytes (~" << size_wave_bytes / (1024 * 1024) << " MB)" << endl;
 
-    uint8_t result = access_wave(*wavelet_tree, 0);
+    /*uint8_t result = access_wave(*wavelet_tree, 0);
     cout << "Access[0] = " << result << " (int) " << (int) result << " (expected '<')" << endl;
     result = access_wave(*wavelet_tree, 1);
     cout << "Access[1] = " << result << " (expected '?')" << endl;
@@ -217,7 +216,7 @@ int main(int argc, char** argv) {
     cout << "Access[3] = " << result << " (expected 'm')" << endl;
 
     int r = rank_wave(*wavelet_tree, '<', 60);
-    cout << "wavelet_tree.rank(60, '<') = " << r << " (expected 2)" << endl;
+    cout << "wavelet_tree.rank(60, '<') = " << r << " (expected 2)" << endl;*/
 
     wt_huff<> wt;
 
@@ -282,30 +281,20 @@ int main(int argc, char** argv) {
     auto start = timestamp();
     int64_t x = 0;
     for (int i : indices) {
-        x += (int)wt[i];
+        x += access_wave(*wavelet_tree, i);
     }
     auto end = timestamp();
-    cout << "SDSL WT Huff Access with " << m << " iterations finished in " << end - start << " ms" << endl;
+    cout << "Wavelettree Access with " << m << " iterations finished in " << end - start << " ms" << endl;
 
     start = timestamp();
     x = 0;
     for (int i : indices) {
-        x += access_wave(*wavelet_tree, i);
+        x += (int)wt[i];
     }
     end = timestamp();
-    cout << "Wavelettree Access with " << m << " iterations finished in " << end - start << " ms" << endl;
+    cout << "SDSL WT Huff Access with " << m << " iterations finished in " << end - start << " ms" << endl;
 
     // test speed rank
-    start = timestamp();
-    x = 0;
-    for (int i = 0; i < m; i++) {
-        int j = indices[i];
-        uint8_t rank_char = random_chars[i];
-        x += wt.rank(j, rank_char);
-    }
-    end = timestamp();
-    cout << "SDSL WT Huff Rank with " << m << " iterations finished in " << end - start << " ms" << endl;
-
     start = timestamp();
     x = 0;
     for (int i = 0; i < m; i++) {
@@ -315,4 +304,14 @@ int main(int argc, char** argv) {
     }
     end = timestamp();
     cout << "Wavelettree Rank with " << m << " iterations finished in " << end - start << " ms" << endl;
+
+    start = timestamp();
+    x = 0;
+    for (int i = 0; i < m; i++) {
+        int j = indices[i];
+        uint8_t rank_char = random_chars[i];
+        x += wt.rank(j, rank_char);
+    }
+    end = timestamp();
+    cout << "SDSL WT Huff Rank with " << m << " iterations finished in " << end - start << " ms" << endl;
 }
