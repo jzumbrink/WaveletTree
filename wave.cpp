@@ -5,6 +5,9 @@
 #include <random>
 #include <chrono>
 #include <bitset>
+#include <algorithm>
+#include <unordered_map>
+#include <unordered_set>
 
 // sdsl
 #include <sdsl/wavelet_trees.hpp>
@@ -19,6 +22,9 @@ uintmax_t timestamp() {
     return std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
 }
 
+/**
+Wavelet Tree Version 1
+*/
 struct wave_bv {
     unique_ptr<bit_vector> bv;
     unique_ptr<wave_bv> left_child;
@@ -178,6 +184,46 @@ int size_wave(wave_bv& wavelet_tree) {
     return level_size;
 }
 
+/**
+Efficient construction of Wavelet Trees
+*/
+using alphabet_char = uint8_t;
+using max_occ_int = int32_t;
+
+void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
+    alphabet_char sigma = alphabet.size();
+
+    unordered_map<alphabet_char, max_occ_int> histogram_alph;
+    histogram_alph.reserve(sigma);
+
+    // initialize histogram map
+    for (alphabet_char c : alphabet) {
+        histogram_alph[c] = 0;
+    }
+
+    // update histogram map to frequencies of the symbols in the actual text T
+    for (alphabet_char c : T) {
+        histogram_alph[c] += 1;
+    }
+
+    vector<alphabet_char> alphabet_sorted(alphabet.begin(), alphabet.end());
+    sort(alphabet_sorted.begin(), alphabet_sorted.end());
+
+    for (alphabet_char c : alphabet_sorted) {
+        cout << "histogram_alph[" << c << "] = " << histogram_alph[c] << endl;
+    }
+}
+
+void wave2(vector<alphabet_char> &T) {
+    unordered_set<alphabet_char> alphabet;
+    
+    for (alphabet_char c : T) {
+        alphabet.insert(c);
+    }
+
+    wave2(T, alphabet);
+}
+
 void sdsl_huff(string &s) {
     wt_huff<> wt;
 
@@ -205,6 +251,10 @@ int main(int argc, char** argv) {
     cout << "Wavelettree for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
     int size_wave_bytes = size_wave(*wavelet_tree);
     cout << "Größe Wavelettree = " << size_wave_bytes << " bytes (~" << size_wave_bytes / (1024 * 1024) << " MB)" << endl;
+
+    // construction wavelet tree 2
+    vector<alphabet_char> T(s.begin(), s.end());
+    wave2(T);
 
     /*uint8_t result = access_wave(*wavelet_tree, 0);
     cout << "Access[0] = " << result << " (int) " << (int) result << " (expected '<')" << endl;
