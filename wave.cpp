@@ -194,7 +194,7 @@ using alphabet_char = uint8_t;
 using max_occ_int = uint32_t;
 
 void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
-    auto no_exp_time_start = timestamp();
+    auto preprocessing_start = timestamp();
 
     alphabet_char sigma = alphabet.size();
     alphabet_char count_levels = bit_width(static_cast<uint64_t>(sigma - 1));
@@ -216,14 +216,8 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
         histogram_alph[c] += 1;
     }
 
-    cout << "duration not expensive preprocessing " << timestamp() - no_exp_time_start << " ms" << endl;
-
-    auto sort_start = timestamp();
-
     vector<alphabet_char> alphabet_sorted(alphabet.begin(), alphabet.end());
     sort(alphabet_sorted.begin(), alphabet_sorted.end());
-
-    cout << "duration sort " << timestamp() - sort_start << " ms" << endl;
 
     auto other_prep_start = timestamp();
 
@@ -255,8 +249,6 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
     cout << static_cast<size_t>(biggest_char) << endl << flush;
     alph_map_to_group.resize(static_cast<size_t>(biggest_char + 1), nullptr);
 
-    cout << "hi" << endl << flush;
-
 
     // building the levels
     vector<unique_ptr<bit_vector>> levels;
@@ -265,7 +257,7 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
         levels.push_back(make_unique<bit_vector>(n, 0));
     }
 
-    cout << "duration other prep " << timestamp() - other_prep_start << " ms" << endl << flush;
+    cout << "duration preprocessing " << timestamp() - preprocessing_start << " ms" << endl << flush;
 
     auto start_main = timestamp();
     alphabet_char level_index = count_levels;
@@ -305,15 +297,32 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
         }
 
         cout << "duration inner loop " << (int) level_index << ": " << timestamp() - inner_loop << " ms" << endl;
-
-        for (alphabet_char c : alphabet_sorted) {
-            //cout << "*alph_map_to_group[" << c << "] = " << *alph_map_to_group[c] << endl;
-        }
     } while (level_index > 0);
-
 
     auto end_main = timestamp();
     cout << "time main loop " << end_main - start_main << " ms" << endl;
+
+    auto start_rank = timestamp();
+
+    vector<unique_ptr<rank_support_v<>>> rank_levels;
+    for (alphabet_char level_index = 0; level_index < count_levels; level_index++) {
+        rank_levels.push_back(make_unique<rank_support_v<>>(levels[level_index].get()));
+    }
+
+    cout << "duration build rank support " << timestamp() - start_rank << " ms" << endl;
+
+    auto start_select = timestamp();
+
+    vector<unique_ptr<bit_vector::select_0_type>> sel_0_levels;
+    vector<unique_ptr<bit_vector::select_1_type>> sel_1_levels;
+
+    for (alphabet_char level_index = 0; level_index < count_levels; level_index++) {
+        sel_0_levels.push_back(make_unique<bit_vector::select_0_type>(levels[level_index].get()));
+        sel_1_levels.push_back(make_unique<bit_vector::select_1_type>(levels[level_index].get()));
+    }
+
+    cout << "duration build select support " << timestamp() - start_select << " ms" << endl;
+
     // print wavelettree
     /*for (int i = 0; i < count_levels; i++) {
         for (int j = 0; j < n; j++) {
