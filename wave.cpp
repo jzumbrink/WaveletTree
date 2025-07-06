@@ -11,6 +11,8 @@
 #include <bit>
 #include <cmath>
 
+#include "malloc_count.h"
+
 // sdsl
 #include <sdsl/wavelet_trees.hpp>
 #include <sdsl/bit_vectors.hpp>
@@ -18,7 +20,9 @@
 using namespace std;
 using namespace sdsl;
 
-string filename = "resources/dblp.xml";
+string filename = "resources/dblp.xml.200MB";
+//string filename = "resources/einstein";
+//string filename = "resources/dblp.xml";
 //string filename = "resources/test.txt";
 
 uintmax_t timestamp() {
@@ -286,17 +290,20 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
             cout << "*alph_map_to_group[" << c << "] = " << *alph_map_to_group[c] << endl;
         }*/
 
-        auto inner_loop = timestamp();
-
         auto& level = *levels[level_index];
+
+        vector<bool> bv_values;
+        bv_values.resize(biggest_char + 1, 0);
+        for (alphabet_char c : alphabet) {
+            bv_values[c] = (alph_map_to_sorted_index[c] & (group_size - 1)) >= (group_size >> 1); // äquivalent zu: alph_map_to_sorted_index[c] % group_size >= group_size / 2
+        }
+
+        auto inner_loop = timestamp();
 
         for (max_occ_int i = 0; i < n; i++) {
             alphabet_char c = T[i];
             max_occ_int bv_index = (*alph_map_to_group[c])++;
-            bool bv_value = (alph_map_to_sorted_index[c] & (group_size - 1)) >= (group_size >> 1); // äquivalent zu: alph_map_to_sorted_index[c] % group_size >= group_size / 2
-            //cout << bv_value << " " << (int) alph_map_to_sorted_index[T[i]] << " " << (int) group_size << " " << (int) (group_size / 2) << " " << bv_index << endl;
-            //cout << bv_value;
-            level[bv_index] = bv_value;
+            level[bv_index] = bv_values[c];
         }
 
         cout << "duration inner loop " << (int) level_index << ": " << timestamp() - inner_loop << " ms" << endl;
@@ -367,21 +374,32 @@ int main(int argc, char** argv) {
     int64_t n = s.length();
     cout << "File " << filename << " successfully loaded (n=" << n << ")" << endl << flush;
 
-    // construction wavelet tree
+    // construction wavelet tree 1
+    malloc_count_reset_peak();
     auto start_construction = timestamp();
     unique_ptr<wave_bv> wavelet_tree = wave1(s);
     auto end_construction = timestamp();
     cout << "Wavelettree for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
+
+    uint64_t malloc_space_peak = malloc_count_peak();
+    cout << "Wavelettree 1 malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
+
     int size_wave_bytes = size_wave(*wavelet_tree);
     cout << "Größe Wavelettree = " << size_wave_bytes << " bytes (~" << size_wave_bytes / (1024 * 1024) << " MB)" << endl;
+
 
     // construction wavelet tree 2
     vector<alphabet_char> T(s.begin(), s.end());
 
+    malloc_count_reset_peak();
     start_construction = timestamp();
     wave2(T);
     end_construction = timestamp();
     cout << "Wavelettree2 (bottom up construction) for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
+
+    malloc_space_peak = malloc_count_peak();
+    cout << "Wavelettree2 (bottom up construction) malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
+
     cout << "Größe wave2 = " << "TODO" << " MB" << endl;
 
     /*uint8_t result = access_wave(*wavelet_tree, 0);
@@ -399,10 +417,13 @@ int main(int argc, char** argv) {
     wt_huff<> wt;
 
     // construct sdsl huff wv tree
+    malloc_count_reset_peak();
     start_construction = timestamp();
     construct_im(wt, s, 1);
     end_construction = timestamp();
     cout << "sdsl wv tree huff for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
+    malloc_space_peak = malloc_count_peak();
+    cout << "sdsl wv tree huff malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
     cout << "Größe wt_huff = " << size_in_mega_bytes(wt) << " MB" << endl;
 
     // create test indices
