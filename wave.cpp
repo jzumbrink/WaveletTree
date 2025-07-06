@@ -21,10 +21,10 @@
 using namespace std;
 using namespace sdsl;
 
-//string filename = "resources/english";
+string filename = "resources/english";
 //string filename = "resources/dblp.xml.200MB";
 //string filename = "resources/einstein";
-string filename = "resources/dblp.xml";
+//string filename = "resources/dblp.xml";
 //string filename = "resources/test.txt";
 
 uintmax_t timestamp() {
@@ -41,6 +41,8 @@ struct wave_bv {
     unique_ptr<rank_support_v<>> rank_bv;
     unique_ptr<vector<uint8_t>> alphabet;
     unique_ptr<bitset<256>> first_half;
+    unique_ptr<bit_vector::select_0_type> sel_0;
+    unique_ptr<bit_vector::select_1_type> sel_1;
 
     wave_bv(unique_ptr<bit_vector> bv_in,  unique_ptr<vector<uint8_t>> alphabet_in) {
         bv = move(bv_in);
@@ -55,6 +57,8 @@ struct wave_bv {
         for (int i = 0; i < split_index; i++) {
             (*first_half).set((*alphabet)[i]);
         }
+        sel_0 = make_unique<bit_vector::select_0_type>(bv.get());
+        sel_1 = make_unique<bit_vector::select_1_type>(bv.get());
     }
 };
 
@@ -178,6 +182,8 @@ int size_wave(wave_bv& wavelet_tree) {
     int level_size = 0;
     level_size += size_in_bytes(*wavelet_tree.bv);
     level_size += size_in_bytes(*wavelet_tree.rank_bv);
+    level_size += size_in_bytes(*wavelet_tree.sel_0);
+    level_size += size_in_bytes(*wavelet_tree.sel_1);
     level_size += (*wavelet_tree.alphabet).capacity() * sizeof(uint8_t);
     level_size += sizeof(bitset<256>);
 
@@ -195,6 +201,7 @@ int size_wave(wave_bv& wavelet_tree) {
 
 /**
 Efficient construction of Wavelet Trees
+Wavelet Tree Version 2
 */
 using alphabet_char = uint8_t;
 using max_occ_int = uint32_t;
@@ -240,18 +247,6 @@ wv_tree wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) 
     for (alphabet_char i = 0; i < sigma; i++) {
         alph_map_to_sorted_index[alphabet_sorted[i]] = i;
     }
-
-    //cout << "sigma = " << (int64_t) sigma << endl;
-    //cout << "count_levels = " << (int64_t) count_levels << endl;
-
-    /*for (alphabet_char i = 1; i < alphabet_sorted.size(); i++) {
-        alphabet_char j = alphabet_sorted[i];
-        histogram_alph[j] += histogram_alph[j-1];
-    }*/
-
-    /*for (alphabet_char c : alphabet_sorted) {
-        cout << "histogram_alph[" << c << "] = " << histogram_alph[c] << endl;
-    }*/
 
     // group characters into groups
     vector<max_occ_int> group_acc_frequencies;
@@ -421,24 +416,11 @@ int main(int argc, char** argv) {
 
     malloc_space_peak = malloc_count_peak();
     cout << "Wavelettree2 (bottom up construction) malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
-
-    cout << "Größe wave2 = " << size_wave2(wt2) << " bytes (~ TODO" << " MB" << endl << endl;
-
-    /*uint8_t result = access_wave(*wavelet_tree, 0);
-    cout << "Access[0] = " << result << " (int) " << (int) result << " (expected '<')" << endl;
-    result = access_wave(*wavelet_tree, 1);
-    cout << "Access[1] = " << result << " (expected '?')" << endl;
-    result = access_wave(*wavelet_tree, 2);
-    cout << "Access[2] = " << result << " (expected 'x')" << endl;
-    result = access_wave(*wavelet_tree, 3);
-    cout << "Access[3] = " << result << " (expected 'm')" << endl;
-
-    int r = rank_wave(*wavelet_tree, '<', 60);
-    cout << "wavelet_tree.rank(60, '<') = " << r << " (expected 2)" << endl;*/
-
-    wt_huff<> wt;
+    size_t wt_size = size_wave2(wt2);
+    cout << "Größe wave2 = " << wt_size << " bytes (~ " << wt_size / (1024 * 1024) << " MB" << endl << endl;
 
     // construct sdsl huff wv tree
+    wt_huff<> wt;
     malloc_count_reset_peak();
     start_construction = timestamp();
     construct_im(wt, s, 1);
