@@ -194,17 +194,11 @@ using alphabet_char = uint8_t;
 using max_occ_int = uint32_t;
 
 void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
+    auto no_exp_time_start = timestamp();
+
     alphabet_char sigma = alphabet.size();
     alphabet_char count_levels = bit_width(static_cast<uint64_t>(sigma - 1));
     max_occ_int n = T.size();
-
-    unordered_map<alphabet_char, max_occ_int> histogram_alph;
-    histogram_alph.reserve(sigma);
-
-    // initialize histogram map
-    for (alphabet_char c : alphabet) {
-        histogram_alph[c] = 0;
-    }
 
     // calculate biggest char of alphabet
     alphabet_char biggest_char = 0;
@@ -214,16 +208,27 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
         }
     }
 
+    vector<max_occ_int> histogram_alph;
+    histogram_alph.resize(static_cast<size_t>(biggest_char + 1), 0);
+
     // update histogram map to frequencies of the symbols in the actual text T
     for (alphabet_char c : T) {
         histogram_alph[c] += 1;
     }
 
+    cout << "duration not expensive preprocessing " << timestamp() - no_exp_time_start << " ms" << endl;
+
+    auto sort_start = timestamp();
+
     vector<alphabet_char> alphabet_sorted(alphabet.begin(), alphabet.end());
     sort(alphabet_sorted.begin(), alphabet_sorted.end());
 
+    cout << "duration sort " << timestamp() - sort_start << " ms" << endl;
+
+    auto other_prep_start = timestamp();
+
     vector<alphabet_char> alph_map_to_sorted_index;
-    alph_map_to_sorted_index.reserve(biggest_char);
+    alph_map_to_sorted_index.resize(static_cast<size_t>(biggest_char + 1), 0);
 
     for (alphabet_char i = 0; i < sigma; i++) {
         alph_map_to_sorted_index[alphabet_sorted[i]] = i;
@@ -243,13 +248,14 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
 
     // group characters into groups
     vector<max_occ_int> group_acc_frequencies;
-    group_acc_frequencies.reserve(sigma / 2 + 1);
-    for (int i = 0; i < sigma / 2 + 1; i++) {
-        group_acc_frequencies.push_back(0);
-    }
+    group_acc_frequencies.resize(sigma / 2 + 1, 0);
 
     vector<max_occ_int*> alph_map_to_group;
-    alph_map_to_group.reserve(biggest_char);
+    //alph_map_to_group.reserve(biggest_char);
+    cout << static_cast<size_t>(biggest_char) << endl << flush;
+    alph_map_to_group.resize(static_cast<size_t>(biggest_char + 1), nullptr);
+
+    cout << "hi" << endl << flush;
 
 
     // building the levels
@@ -258,6 +264,8 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
     for (alphabet_char i = 0; i < count_levels; i++) {
         levels.push_back(make_unique<bit_vector>(n, 0));
     }
+
+    cout << "duration other prep " << timestamp() - other_prep_start << " ms" << endl << flush;
 
     auto start_main = timestamp();
     alphabet_char level_index = count_levels;
