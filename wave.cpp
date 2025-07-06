@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
+#include <bit>
+#include <cmath>
 
 // sdsl
 #include <sdsl/wavelet_trees.hpp>
@@ -16,7 +18,8 @@
 using namespace std;
 using namespace sdsl;
 
-string filename = "resources/dblp.xml";
+//string filename = "resources/dblp.xml";
+string filename = "resources/test.txt";
 
 uintmax_t timestamp() {
     return std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
@@ -188,10 +191,12 @@ int size_wave(wave_bv& wavelet_tree) {
 Efficient construction of Wavelet Trees
 */
 using alphabet_char = uint8_t;
-using max_occ_int = int32_t;
+using max_occ_int = uint32_t;
 
 void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
     alphabet_char sigma = alphabet.size();
+    alphabet_char count_levels = bit_width(static_cast<uint64_t>(sigma - 1));
+    max_occ_int n = T.size();
 
     unordered_map<alphabet_char, max_occ_int> histogram_alph;
     histogram_alph.reserve(sigma);
@@ -209,9 +214,87 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
     vector<alphabet_char> alphabet_sorted(alphabet.begin(), alphabet.end());
     sort(alphabet_sorted.begin(), alphabet_sorted.end());
 
+    unordered_map<alphabet_char, alphabet_char> alph_map_to_sorted_index;
+    alph_map_to_sorted_index.reserve(sigma);
+
+    for (alphabet_char i = 0; i < sigma; i++) {
+        alph_map_to_sorted_index[alphabet_sorted[i]] = i;
+    }
+
+    cout << "sigma = " << (int64_t) sigma << endl;
+    cout << "count_levels = " << (int64_t) count_levels << endl;
+
+    /*for (alphabet_char i = 1; i < alphabet_sorted.size(); i++) {
+        alphabet_char j = alphabet_sorted[i];
+        histogram_alph[j] += histogram_alph[j-1];
+    }*/
+
     for (alphabet_char c : alphabet_sorted) {
         cout << "histogram_alph[" << c << "] = " << histogram_alph[c] << endl;
     }
+
+    // group characters into groups
+    vector<max_occ_int> group_acc_frequencies;
+    group_acc_frequencies.reserve(sigma / 2 + 1);
+    for (int i = 0; i < sigma / 2 + 1; i++) {
+        group_acc_frequencies.push_back(0);
+    }
+
+    unordered_map<alphabet_char, max_occ_int*> alph_map_to_group;
+
+
+    // building the levels
+    vector<unique_ptr<bit_vector>> levels;
+    levels.reserve(count_levels);
+    for (alphabet_char i = 0; i < count_levels; i++) {
+        levels.push_back(make_unique<bit_vector>(n, 0));
+    }
+
+    alphabet_char level_index = count_levels;
+    do {
+        level_index--;
+        alphabet_char reverse_level_index = count_levels - level_index;
+        alphabet_char group_size = pow(2, reverse_level_index);
+
+        alphabet_char group_index = 0;
+        group_acc_frequencies[0] = 0;
+        for (alphabet_char i = 0; i < alphabet_sorted.size(); i++) {
+            alphabet_char c = alphabet_sorted[i];
+            if (i % group_size == 0 && i > 0) {
+                group_index++;
+                group_acc_frequencies[i / group_size] = group_acc_frequencies[i / group_size - 1];
+            }
+            group_acc_frequencies[i / group_size] += histogram_alph[c];
+            alph_map_to_group[c] = &(group_acc_frequencies[group_index]);
+        }
+
+        for (alphabet_char c : alphabet_sorted) {
+            cout << "*alph_map_to_group[" << c << "] = " << *alph_map_to_group[c] << endl;
+        }
+
+        for (max_occ_int j = n; j > 0; j--) {
+            max_occ_int i = j - 1;
+            max_occ_int bv_index = (*alph_map_to_group[T[i]])--;
+            bool bv_value = alph_map_to_sorted_index[T[i]] % group_size >= group_size / 2;
+            cout << bv_value << " " << (int) alph_map_to_sorted_index[T[i]] << " " << (int) group_size << " " << (int) (group_size / 2) << " " << bv_index << endl;
+            //cout << bv_value;
+            (*levels[level_index])[bv_index - 1] = bv_value;
+        }
+
+        for (alphabet_char c : alphabet_sorted) {
+            //cout << "*alph_map_to_group[" << c << "] = " << *alph_map_to_group[c] << endl;
+        }
+    } while (level_index > 0);
+
+    // print wavelettree
+    for (int i = 0; i < count_levels; i++) {
+        for (int j = 0; j < n; j++) {
+            cout << (*levels[i])[j];
+        }
+        cout << endl;
+    }
+
+    cout << 1;
 }
 
 void wave2(vector<alphabet_char> &T) {
