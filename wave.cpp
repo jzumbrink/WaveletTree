@@ -18,8 +18,8 @@
 using namespace std;
 using namespace sdsl;
 
-//string filename = "resources/dblp.xml";
-string filename = "resources/test.txt";
+string filename = "resources/dblp.xml";
+//string filename = "resources/test.txt";
 
 uintmax_t timestamp() {
     return std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
@@ -206,6 +206,14 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
         histogram_alph[c] = 0;
     }
 
+    // calculate biggest char of alphabet
+    alphabet_char biggest_char = 0;
+    for (alphabet_char c : alphabet) {
+        if (c > biggest_char) {
+            biggest_char = c;
+        }
+    }
+
     // update histogram map to frequencies of the symbols in the actual text T
     for (alphabet_char c : T) {
         histogram_alph[c] += 1;
@@ -214,24 +222,24 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
     vector<alphabet_char> alphabet_sorted(alphabet.begin(), alphabet.end());
     sort(alphabet_sorted.begin(), alphabet_sorted.end());
 
-    unordered_map<alphabet_char, alphabet_char> alph_map_to_sorted_index;
-    alph_map_to_sorted_index.reserve(sigma);
+    vector<alphabet_char> alph_map_to_sorted_index;
+    alph_map_to_sorted_index.reserve(biggest_char);
 
     for (alphabet_char i = 0; i < sigma; i++) {
         alph_map_to_sorted_index[alphabet_sorted[i]] = i;
     }
 
-    cout << "sigma = " << (int64_t) sigma << endl;
-    cout << "count_levels = " << (int64_t) count_levels << endl;
+    //cout << "sigma = " << (int64_t) sigma << endl;
+    //cout << "count_levels = " << (int64_t) count_levels << endl;
 
     /*for (alphabet_char i = 1; i < alphabet_sorted.size(); i++) {
         alphabet_char j = alphabet_sorted[i];
         histogram_alph[j] += histogram_alph[j-1];
     }*/
 
-    for (alphabet_char c : alphabet_sorted) {
+    /*for (alphabet_char c : alphabet_sorted) {
         cout << "histogram_alph[" << c << "] = " << histogram_alph[c] << endl;
-    }
+    }*/
 
     // group characters into groups
     vector<max_occ_int> group_acc_frequencies;
@@ -240,7 +248,8 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
         group_acc_frequencies.push_back(0);
     }
 
-    unordered_map<alphabet_char, max_occ_int*> alph_map_to_group;
+    vector<max_occ_int*> alph_map_to_group;
+    alph_map_to_group.reserve(biggest_char);
 
 
     // building the levels
@@ -250,6 +259,7 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
         levels.push_back(make_unique<bit_vector>(n, 0));
     }
 
+    auto start_main = timestamp();
     alphabet_char level_index = count_levels;
     do {
         level_index--;
@@ -262,39 +272,49 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
             alphabet_char c = alphabet_sorted[i];
             if (i % group_size == 0 && i > 0) {
                 group_index++;
-                group_acc_frequencies[i / group_size] = group_acc_frequencies[i / group_size - 1];
             }
-            group_acc_frequencies[i / group_size] += histogram_alph[c];
+            if (i % group_size == 0 && i / group_size < sigma / 2 + 1) {
+                group_acc_frequencies[i / group_size + 1] = group_acc_frequencies[i / group_size];
+            }
+            if (i / group_size < sigma / 2 + 1) {
+                group_acc_frequencies[i / group_size + 1] += histogram_alph[c];
+            }
             alph_map_to_group[c] = &(group_acc_frequencies[group_index]);
         }
 
-        for (alphabet_char c : alphabet_sorted) {
+        /*for (alphabet_char c : alphabet_sorted) {
             cout << "*alph_map_to_group[" << c << "] = " << *alph_map_to_group[c] << endl;
+        }*/
+
+        auto inner_loop = timestamp();
+
+        for (max_occ_int i = 0; i < n; i++) {
+            max_occ_int bv_index = (*alph_map_to_group[T[i]])++;
+            bool bv_value = alph_map_to_sorted_index[T[i]] % group_size >= group_size / 2;
+            //cout << bv_value << " " << (int) alph_map_to_sorted_index[T[i]] << " " << (int) group_size << " " << (int) (group_size / 2) << " " << bv_index << endl;
+            //cout << bv_value;
+            (*levels[level_index])[bv_index] = bv_value;
         }
 
-        for (max_occ_int j = n; j > 0; j--) {
-            max_occ_int i = j - 1;
-            max_occ_int bv_index = (*alph_map_to_group[T[i]])--;
-            bool bv_value = alph_map_to_sorted_index[T[i]] % group_size >= group_size / 2;
-            cout << bv_value << " " << (int) alph_map_to_sorted_index[T[i]] << " " << (int) group_size << " " << (int) (group_size / 2) << " " << bv_index << endl;
-            //cout << bv_value;
-            (*levels[level_index])[bv_index - 1] = bv_value;
-        }
+        cout << "duration inner loop " << (int) level_index << ": " << timestamp() - inner_loop << " ms" << endl;
 
         for (alphabet_char c : alphabet_sorted) {
             //cout << "*alph_map_to_group[" << c << "] = " << *alph_map_to_group[c] << endl;
         }
     } while (level_index > 0);
 
+
+    auto end_main = timestamp();
+    cout << "time main loop " << end_main - start_main << " ms" << endl;
     // print wavelettree
-    for (int i = 0; i < count_levels; i++) {
+    /*for (int i = 0; i < count_levels; i++) {
         for (int j = 0; j < n; j++) {
             cout << (*levels[i])[j];
         }
         cout << endl;
     }
 
-    cout << 1;
+    cout << 1;*/
 }
 
 void wave2(vector<alphabet_char> &T) {
@@ -337,7 +357,12 @@ int main(int argc, char** argv) {
 
     // construction wavelet tree 2
     vector<alphabet_char> T(s.begin(), s.end());
+
+    start_construction = timestamp();
     wave2(T);
+    end_construction = timestamp();
+    cout << "Wavelettree2 (bottom up construction) for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
+    cout << "Größe wave2 = " << "TODO" << " MB" << endl;
 
     /*uint8_t result = access_wave(*wavelet_tree, 0);
     cout << "Access[0] = " << result << " (int) " << (int) result << " (expected '<')" << endl;
