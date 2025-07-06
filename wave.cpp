@@ -20,8 +20,8 @@
 using namespace std;
 using namespace sdsl;
 
-string filename = "resources/dblp.xml.200MB";
-//string filename = "resources/einstein";
+//string filename = "resources/dblp.xml.200MB";
+string filename = "resources/einstein";
 //string filename = "resources/dblp.xml";
 //string filename = "resources/test.txt";
 
@@ -246,7 +246,7 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
 
     // group characters into groups
     vector<max_occ_int> group_acc_frequencies;
-    group_acc_frequencies.resize(sigma / 2 + 1, 0);
+    group_acc_frequencies.resize(sigma / 2 + 2, 0);
 
     vector<max_occ_int*> alph_map_to_group;
     //alph_map_to_group.reserve(biggest_char);
@@ -268,7 +268,8 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
     do {
         level_index--;
         alphabet_char reverse_level_index = count_levels - level_index;
-        alphabet_char group_size = pow(2, reverse_level_index);
+        uint64_t group_size = pow(2, reverse_level_index);
+        cout << "group_size = " << (int) group_size << endl;
 
         alphabet_char group_index = 0;
         group_acc_frequencies[0] = 0;
