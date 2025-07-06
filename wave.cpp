@@ -288,12 +288,15 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
 
         auto inner_loop = timestamp();
 
+        auto& level = *levels[level_index];
+
         for (max_occ_int i = 0; i < n; i++) {
-            max_occ_int bv_index = (*alph_map_to_group[T[i]])++;
-            bool bv_value = alph_map_to_sorted_index[T[i]] % group_size >= group_size / 2;
+            alphabet_char c = T[i];
+            max_occ_int bv_index = (*alph_map_to_group[c])++;
+            bool bv_value = (alph_map_to_sorted_index[c] & (group_size - 1)) >= (group_size >> 1); // äquivalent zu: alph_map_to_sorted_index[c] % group_size >= group_size / 2
             //cout << bv_value << " " << (int) alph_map_to_sorted_index[T[i]] << " " << (int) group_size << " " << (int) (group_size / 2) << " " << bv_index << endl;
             //cout << bv_value;
-            (*levels[level_index])[bv_index] = bv_value;
+            level[bv_index] = bv_value;
         }
 
         cout << "duration inner loop " << (int) level_index << ": " << timestamp() - inner_loop << " ms" << endl;
