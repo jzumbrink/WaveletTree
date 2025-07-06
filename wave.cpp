@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <bit>
 #include <cmath>
+#include <limits>
 
 #include "malloc_count.h"
 
@@ -20,9 +21,10 @@
 using namespace std;
 using namespace sdsl;
 
+//string filename = "resources/english";
 //string filename = "resources/dblp.xml.200MB";
-string filename = "resources/einstein";
-//string filename = "resources/dblp.xml";
+//string filename = "resources/einstein";
+string filename = "resources/dblp.xml";
 //string filename = "resources/test.txt";
 
 uintmax_t timestamp() {
@@ -104,8 +106,8 @@ uint8_t access_wave(wave_bv& wavelet_tree, int i) {
 
 unique_ptr<wave_bv> wave1(string &s) {
     // calculate alphabet size and store alphabet <-> working mapping
-    int sigma = 0;
-    int n = s.length();
+    int64_t sigma = 0;
+    int64_t n = s.length();
     vector<bool> exists(255);
     vector<uint8_t> alphabet;
 
@@ -136,9 +138,9 @@ unique_ptr<wave_bv> wave1(string &s) {
     unique_ptr<bit_vector> level_one = make_unique<bit_vector>(n, 0);
     string left_string;
     string right_string;
-    int split_index = sigma / 2;
+    int64_t split_index = sigma / 2;
 
-    for (int i = 0; i < n; i++) {
+    for (int64_t i = 0; i < n; i++) {
         if(originalAlphabetToWorking[(uint8_t)s[i]] >= split_index) {
             (*level_one)[i] = 1;
             right_string += s[i];
@@ -197,7 +199,14 @@ Efficient construction of Wavelet Trees
 using alphabet_char = uint8_t;
 using max_occ_int = uint32_t;
 
-void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
+struct wv_tree {
+    vector<unique_ptr<bit_vector>> levels;
+    vector<unique_ptr<rank_support_v<>>> rank_levels;
+    vector<unique_ptr<bit_vector::select_0_type>> sel_0_levels;
+    vector<unique_ptr<bit_vector::select_1_type>> sel_1_levels;
+};
+
+wv_tree wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
     auto preprocessing_start = timestamp();
 
     alphabet_char sigma = alphabet.size();
@@ -343,16 +352,28 @@ void wave2(vector<alphabet_char> &T, unordered_set<alphabet_char> &alphabet) {
     }
 
     cout << 1;*/
+    return {move(levels), move(rank_levels), move(sel_0_levels), move(sel_1_levels)};
 }
 
-void wave2(vector<alphabet_char> &T) {
+wv_tree wave2(vector<alphabet_char> &T) {
     unordered_set<alphabet_char> alphabet;
     
     for (alphabet_char c : T) {
         alphabet.insert(c);
     }
 
-    wave2(T, alphabet);
+    return wave2(T, alphabet);
+}
+
+size_t size_wave2(wv_tree &wt) {
+    size_t wt_size = 0;
+    for (int i = 0; i < wt.levels.size(); i++) {
+        wt_size += size_in_bytes(*wt.levels[i]);
+        wt_size += size_in_bytes(*wt.rank_levels[i]);
+        wt_size += size_in_bytes(*wt.sel_0_levels[i]);
+        wt_size += size_in_bytes(*wt.sel_1_levels[i]);
+    }
+    return wt_size;
 }
 
 void sdsl_huff(string &s) {
@@ -386,7 +407,7 @@ int main(int argc, char** argv) {
     cout << "Wavelettree 1 malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
 
     int size_wave_bytes = size_wave(*wavelet_tree);
-    cout << "Größe Wavelettree = " << size_wave_bytes << " bytes (~" << size_wave_bytes / (1024 * 1024) << " MB)" << endl;
+    cout << "Größe Wavelettree = " << size_wave_bytes << " bytes (~" << size_wave_bytes / (1024 * 1024) << " MB)" << endl << endl;
 
 
     // construction wavelet tree 2
@@ -394,14 +415,14 @@ int main(int argc, char** argv) {
 
     malloc_count_reset_peak();
     start_construction = timestamp();
-    wave2(T);
+    wv_tree wt2 = wave2(T);
     end_construction = timestamp();
     cout << "Wavelettree2 (bottom up construction) for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
 
     malloc_space_peak = malloc_count_peak();
     cout << "Wavelettree2 (bottom up construction) malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
 
-    cout << "Größe wave2 = " << "TODO" << " MB" << endl;
+    cout << "Größe wave2 = " << size_wave2(wt2) << " bytes (~ TODO" << " MB" << endl << endl;
 
     /*uint8_t result = access_wave(*wavelet_tree, 0);
     cout << "Access[0] = " << result << " (int) " << (int) result << " (expected '<')" << endl;
@@ -425,7 +446,56 @@ int main(int argc, char** argv) {
     cout << "sdsl wv tree huff for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
     malloc_space_peak = malloc_count_peak();
     cout << "sdsl wv tree huff malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
-    cout << "Größe wt_huff = " << size_in_mega_bytes(wt) << " MB" << endl;
+    cout << "Größe wt_huff = " << size_in_mega_bytes(wt) << " MB" << endl << endl;
+
+    // construct sdsl int balanced wv tree
+    wm_int<> wm_int_bal;
+
+    malloc_count_reset_peak();
+    start_construction = timestamp();
+    construct_im(wm_int_bal, s, 1);
+    end_construction = timestamp();
+    cout << "sdsl wm tree integer balanced for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
+    malloc_space_peak = malloc_count_peak();
+    cout << "sdsl wm tree integer balanced malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
+    cout << "Größe wm_int_bal = " << size_in_mega_bytes(wm_int_bal) << " MB" << endl << endl;
+
+    // construct sdsl byte balanced wv tree
+    wt_blcd<> wt_byte_bal;
+
+    malloc_count_reset_peak();
+    start_construction = timestamp();
+    construct_im(wt_byte_bal, s, 1);
+    end_construction = timestamp();
+    cout << "sdsl wv tree byte balanced for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
+    malloc_space_peak = malloc_count_peak();
+    cout << "sdsl wv tree byte balanced malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
+    cout << "Größe wt_byte_bal = " << size_in_mega_bytes(wt_byte_bal) << " MB" << endl << endl;
+
+    // construct sdsl hu-tucker wv tree
+    wt_hutu<> wt_hutucker;
+
+    malloc_count_reset_peak();
+    start_construction = timestamp();
+    construct_im(wt_hutucker, s, 1);
+    end_construction = timestamp();
+    cout << "sdsl wv tree hu-tucker for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
+    malloc_space_peak = malloc_count_peak();
+    cout << "sdsl wv tree hu-tucker malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
+    cout << "Größe wt_hutucker = " << size_in_mega_bytes(wt_hutucker) << " MB" << endl << endl;
+
+    // construct sdsl int balanced wv tree
+    wt_int<> wt_int_bal;
+
+    malloc_count_reset_peak();
+    start_construction = timestamp();
+    construct_im(wt_int_bal, s, 1);
+    end_construction = timestamp();
+    cout << "sdsl wv tree integer balanced for text of length " << n << " was created in " << end_construction - start_construction << " ms" << endl;
+    malloc_space_peak = malloc_count_peak();
+    cout << "sdsl wv tree integer balanced malloc_peak ~= " << malloc_space_peak / (1024 * 1024) << " MB" << endl;
+    cout << "Größe wt_int_bal = " << size_in_mega_bytes(wt_int_bal) << " MB" << endl << endl;
+
 
     // create test indices
     const int m = 1000000;
