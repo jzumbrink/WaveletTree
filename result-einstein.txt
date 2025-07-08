@@ -1,0 +1,61 @@
+File resources/einstein successfully loaded (n=629145600)
+
+===bottom-up construction of wavelet tree===
+duration preprocessing 278 ms
+group_size = 2
+duration inner loop 7: 2424 ms
+group_size = 4
+duration inner loop 6: 2444 ms
+group_size = 8
+duration inner loop 5: 2467 ms
+group_size = 16
+duration inner loop 4: 2375 ms
+group_size = 32
+duration inner loop 3: 2437 ms
+group_size = 64
+duration inner loop 2: 2065 ms
+group_size = 128
+duration inner loop 1: 1760 ms
+group_size = 256
+duration inner loop 0: 1087 ms
+time main loop 17059 ms
+duration build rank support 84 ms
+duration build select support 1365 ms
+-> bottom-up construction of wavelet tree (with n=629145600) was created in 19885 ms
+-> malloc_peak ~= 2533 MB
+-> size of wavelet tree = 934008320 bytes (~ 890 MB)
+
+===old recursive construction of wavelet tree===
+-> old recursive construction of wavelet tree (with n=629145600) was created in 20426 ms
+-> malloc_peak ~= 6869 MB
+-> size of wavelet tree = 885849805 bytes (~844 MB)
+
+===sdsl construction of huffman-shaped wavelet tree===
+-> sdsl construction of huffman-shaped wavelet tree (with n=629145600) was created in 23233 ms
+-> malloc_peak ~= 5702 MB
+-> size of wavelet tree = 567.812 MB
+
+===sdsl construction of balanced wavelet tree===
+-> sdsl construction of balanced wavelet tree (with n=629145600) was created in 26901 ms
+-> malloc_peak ~= 6637 MB
+-> size of wavelet tree = 855.182 MB
+
+===sdsl construction of hu-tucker shaped wavelet tree===
+-> sdsl construction of hu-tucker shaped wavelet tree (with n=629145600) was created in 23217 ms
+-> malloc_peak ~= 7282 MB
+-> size of wavelet tree = 590.157 MB
+
+wavelet_tree[354541346] = n, wt_huff[354541346] = n
+wavelet_tree[494040713] =  , wt_huff[494040713] =
+wavelet_tree[148203635] = e, wt_huff[148203635] = e
+wavelet_tree[152244175] = 3, wt_huff[152244175] = 3
+wavelet_tree[99400415] = e, wt_huff[99400415] = e
+wavelet_tree.rank(354541346, 'M') = 664038, wt_huff.rank(354541346, 'M') = 664038
+wavelet_tree.rank(494040713, '') = 79724, wt_huff.rank(494040713, '') = 79724
+wavelet_tree.rank(148203635, 'e') = 12800587, wt_huff.rank(148203635, 'e') = 12800587
+wavelet_tree.rank(152244175, '') = 0, wt_huff.rank(152244175, '') = 0
+wavelet_tree.rank(99400415, '') = 7452, wt_huff.rank(99400415, '') = 7452
+Wavelettree Access with 1000000 iterations finished in 660 ms
+SDSL WT Huff Access with 1000000 iterations finished in 420 ms
+Wavelettree Rank with 1000000 iterations finished in 515 ms
+SDSL WT Huff Rank with 1000000 iterations finished in 691 ms

@@ -1,0 +1,46 @@
+File resources/english successfully loaded (n=2210395553)
+
+===bottom-up construction of wavelet tree===
+duration preprocessing 1124 ms
+group_size = 2
+duration inner loop 7: 7896 ms
+group_size = 4
+duration inner loop 6: 8433 ms
+group_size = 8
+duration inner loop 5: 9019 ms
+group_size = 16
+duration inner loop 4: 8233 ms
+group_size = 32
+duration inner loop 3: 7057 ms
+group_size = 64
+duration inner loop 2: 7922 ms
+group_size = 128
+duration inner loop 1: 6449 ms
+group_size = 256
+duration inner loop 0: 3825 ms
+time main loop 58834 ms
+duration build rank support 302 ms
+duration build select support 7372 ms
+-> bottom-up construction of wavelet tree (with n=2210395553) was created in 71528 ms
+-> malloc_peak ~= 9369 MB
+-> size of wavelet tree = 3281557124 bytes (~ 3129 MB)
+
+===old recursive construction of wavelet tree===
+-> old recursive construction of wavelet tree (with n=2210395553) was created in 108252 ms
+-> malloc_peak ~= 24797 MB
+-> size of wavelet tree = -1031009490 bytes (~-983 MB)
+
+===sdsl construction of huffman-shaped wavelet tree===
+-> sdsl construction of huffman-shaped wavelet tree (with n=2210395553) was created in 82556 ms
+-> malloc_peak ~= 21019 MB
+-> size of wavelet tree = 1786.06 MB
+
+===sdsl construction of balanced wavelet tree===
+-> sdsl construction of balanced wavelet tree (with n=2210395553) was created in 103873 ms
+-> malloc_peak ~= 24324 MB
+-> size of wavelet tree = 3109.5 MB
+
+===sdsl construction of hu-tucker shaped wavelet tree===
+-> sdsl construction of hu-tucker shaped wavelet tree (with n=2210395553) was created in 89045 ms
+-> malloc_peak ~= 26377 MB
+-> size of wavelet tree = 1877.87 MB

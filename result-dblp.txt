@@ -1,0 +1,44 @@
+File resources/dblp.xml successfully loaded (n=52428800)
+
+===bottom-up construction of wavelet tree===
+duration preprocessing 20 ms
+group_size = 2
+duration inner loop 6: 180 ms
+group_size = 4
+duration inner loop 5: 182 ms
+group_size = 8
+duration inner loop 4: 184 ms
+group_size = 16
+duration inner loop 3: 180 ms
+group_size = 32
+duration inner loop 2: 181 ms
+group_size = 64
+duration inner loop 1: 172 ms
+group_size = 128
+duration inner loop 0: 106 ms
+time main loop 1186 ms
+duration build rank support 7 ms
+duration build select support 132 ms
+-> bottom-up construction of wavelet tree (with n=52428800) was created in 1435 ms
+-> malloc_peak ~= 181 MB
+-> size of wavelet tree = 68284133 bytes (~ 65 MB)
+
+===old recursive construction of wavelet tree===
+-> old recursive construction of wavelet tree (with n=52428800) was created in 1664 ms
+-> malloc_peak ~= 471 MB
+-> size of wavelet tree = 67228972 bytes (~64 MB)
+
+===sdsl construction of huffman-shaped wavelet tree===
+-> sdsl construction of huffman-shaped wavelet tree (with n=52428800) was created in 1844 ms
+-> malloc_peak ~= 419 MB
+-> size of wavelet tree = 48.8703 MB
+
+===sdsl construction of balanced wavelet tree===
+-> sdsl construction of balanced wavelet tree (with n=52428800) was created in 2062 ms
+-> malloc_peak ~= 486 MB
+-> size of wavelet tree = 61.6101 MB
+
+===sdsl construction of hu-tucker shaped wavelet tree===
+-> sdsl construction of hu-tucker shaped wavelet tree (with n=52428800) was created in 1853 ms
+-> malloc_peak ~= 541 MB
+-> size of wavelet tree = 49.9713 MB
